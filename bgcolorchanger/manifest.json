@@ -1,0 +1,14 @@
+{
+  "name": "Background Color Changer",
+  "description": "Change color of Background page(Press Ctrl+e)",
+  "version": 1,
+  "scripts": {
+    "mainScript": "main.js",
+    "dependentScripts": ["bgcolorchanger.js"]
+  },
+  "icons": {
+    "small": "icons/bgicon.png",
+    "medium": "icons/bgicon.png",
+    "large": "icons/bgicon.png"
+  }
+}
