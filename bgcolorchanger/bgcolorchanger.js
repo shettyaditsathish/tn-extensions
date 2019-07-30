@@ -1,7 +1,7 @@
 function BGColorChanger(){
     this.currentBg  = document.body.style.background;
 }
-var bgcolorchanger =  new BGColorChanger();
+var com_testnavExtesnion_bgcolorchanger =  new BGColorChanger();
 BGColorChanger.prototype.changeBackgroundColor =  function(color) {
     document.body.style.background = color;
 }
@@ -17,7 +17,7 @@ BGColorChanger.prototype.onkeyDown =  function(e) {
     var code = e.keyCode ? e.keyCode : e.which;
     //Ctrl + e
     if (e.ctrlKey && code === 69    ) { 
-        bgcolorchanger.changeBackgroundColor("#ff0000");
+        com_testnavExtesnion_bgcolorchanger.changeBackgroundColor("#ff0000");
     }
 }
 

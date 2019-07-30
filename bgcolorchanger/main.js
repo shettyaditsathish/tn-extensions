@@ -3,7 +3,7 @@ var bgcolorExtension = {
      * The install extension will be called by Testnav and by this time the Testnav would have been loaded
      *  
      */
-    "installExtension" : function (success,fail) {
+    "installExtension" : function () {
         var onScriptLoaded = function () {
             var onScriptExecuted = function () {
                 window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":true});
@@ -11,11 +11,11 @@ var bgcolorExtension = {
             var onScriptExecutedFailed = function () {
                 window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":false});
             }
-            window.testnavExtensions.executeScript({"code":"bgcolorchanger.startExtension()"},onScriptExecuted,onScriptExecutedFailed);
+            window.testnavExtensions.executeScript({"code":"com_testnavExtesnion_bgcolorchanger.startExtension()"},onScriptExecuted,onScriptExecutedFailed);
         }
 
         var onScriptLoadFailed = function () {
-            fail();
+            window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":false});
         }
         window.testnavExtensions.executeScript({"files":["bgcolorchanger.js"]},onScriptLoaded,onScriptLoadFailed);
     },
@@ -23,14 +23,14 @@ var bgcolorExtension = {
      * The install extension will be called by Testnav and by this time the Testnav would have been loaded
      *  
      */
-    "uninstallExtension" : function (success,fail) {
+    "uninstallExtension" : function () {
         var onScriptExecuted = function () {
             window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALLED,{"success":true});
         }
         var onScriptExecutedFailed = function () {
             window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALLED,{"success":false});
         }
-        window.testnavExtensions.executeScript({"code":"bgcolorchanger.stopExtension();bgcolorchanger=undefined"},onScriptExecuted,onScriptExecutedFailed);
+        window.testnavExtensions.executeScript({"code":"com_testnavExtesnion_bgcolorchanger.stopExtension();com_testnavExtesnion_bgcolorchanger=undefined"},onScriptExecuted,onScriptExecutedFailed);
     }
 }
 /**
