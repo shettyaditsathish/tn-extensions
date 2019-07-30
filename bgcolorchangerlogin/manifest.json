@@ -1,0 +1,14 @@
+{
+    "name": "Background Color Login Changer",
+    "description": "Change color of Background page by Login(Press Ctrl+e)",
+    "version": 1,
+    "scripts": {
+        "mainScript": "main.js",
+        "dependentScripts": ["bgcolorchangerlogin.js"]
+    },
+    "icons": {
+    	"small":"icons/bgicon.png",
+    	"medium":"icons/bgicon.png",
+    	"large":"icons/bgicon.png"
+    }
+}
