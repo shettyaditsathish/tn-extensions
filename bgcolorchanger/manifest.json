@@ -1,6 +1,7 @@
 {
   "name": "Background Color Changer",
   "description": "Change color of Background page(Press Ctrl+e)",
+  "author" : "Pearson",
   "version": 1,
   "scripts": {
     "mainScript": "main.js",

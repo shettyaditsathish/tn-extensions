@@ -11,13 +11,13 @@ var bgcolorExtension = {
             }
             var onScriptExecutedFailed = function () {
                 console.log("Failed");
-                window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":false});
+                window.testnavExtensions.trigger(window.testnavExtensions.INSTALL_FAIL);
             }
             window.testnavExtensions.executeScript({"code":"com_testnavExtesnion_bgcolorchangerlogin.startExtension()"},onScriptExecuted,onScriptExecutedFailed);
         }
 
         var onScriptLoadFailed = function () {
-            window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":false});
+            window.testnavExtensions.trigger(window.testnavExtensions.INSTALL_FAIL);
         }
         window.testnavExtensions.executeScript({"files":["bgcolorchangerlogin.js"]},onScriptLoaded,onScriptLoadFailed);
     },
@@ -28,11 +28,11 @@ var bgcolorExtension = {
     "uninstallExtension" : function () {
         var onScriptExecuted = function () {
             console.log("Success");
-            window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALLED,{"success":true});
+            window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALL_SUCCESS);
         }
         var onScriptExecutedFailed = function () {
             console.log("Failed");
-            window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALLED,{"success":false});
+            window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALL_FAIL);
         }
         window.testnavExtensions.executeScript({"code":"com_testnavExtesnion_bgcolorchangerlogin.stopExtension();com_testnavExtesnion_bgcolorchangerlogin=undefined"},onScriptExecuted,onScriptExecutedFailed);
     }

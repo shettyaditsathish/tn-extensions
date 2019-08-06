@@ -36,29 +36,19 @@ BGColorChanger.prototype.buildSigninPage = function() {
 }
 
 window.addEventListener("message", function(event) {
-    /*if (event.origin != 'http://javascript.info') {
-      return;
-    }*/
-  
-    console.log( "received: " + event.data );
-    console.log("=======cred===== "+event.data.credentials);
     if(event.data && event.data.credentials) {
         if(event.data.credentials === "testnav" || event.data.credentials.indexOf("pearson.com") !== -1) {
-            console.log("=======cred===== 1111"+event.data.credentials)
             com_testnavExtesnion_bgcolorchangerlogin.bgcolor = "#ffff00";
         }
-        console.log("=======cred===== 2222"+event.data.credentials)
-        window.testnavExtensions.trigger(window.testnavExtensions.INSTALLED,{"success":true});
-        console.log("=======cred===== Done"+event.data.credentials)
+        window.testnavExtensions.trigger(window.testnavExtensions.INSTALL_SUCCESS);
         return;
     }
 
     if(event.data && event.data.close) {
         window.testnavExtensions.hideDisplayView();
-        window.testnavExtensions.trigger(window.testnavExtensions.UNINSTALLED,{"success":false});
+        window.testnavExtensions.trigger(window.testnavExtensions.INSTALL_FAIL);
         return;
     }
   
-    // can message back using event.source.postMessage(...)
 });
 

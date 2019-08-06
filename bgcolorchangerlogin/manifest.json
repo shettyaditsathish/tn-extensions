@@ -1,6 +1,7 @@
 {
     "name": "Background Color Login Changer",
     "description": "Change color of Background page by Login(Press Ctrl+e)",
+    "author" : "Pearson",
     "version": 1,
     "scripts": {
         "mainScript": "main.js",
