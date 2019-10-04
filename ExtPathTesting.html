@@ -1,0 +1,573 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+    <script>
+        var ExtensionsController = function (extensionUrl) {
+            this.extensionUrl = extensionUrl;
+
+
+            //this.extensionUrl = "https://localhost/client/extensions/";
+            this.INSTALL_SUCCESS = "INSTALL_SUCCESS";
+            this.INSTALL_FAIL = "INSTALL_FAIL";
+            this.UNINSTALL_SUCCESS = "UNINSTALL_SUCCESS";
+            this.UNINSTALL_FAIL = "UNINSTALL_FAIL";
+            this.VIEW_LOGIN_TYPE = "loginView";
+
+            window.testnavExtensions = this;
+            this.init();
+            this.loadManifests();
+        };
+
+        ExtensionsController.prototype.init = function (extensionTemplate) {
+            this._extensionContainer = {};
+            this.manifestArr = [];
+            this._currentManifestObj = null;
+            this._currentExtension = null;
+            this.extensionTemplate = null;
+            this._extPathToFilter = this.getUrlParameter("extPath");
+            this.extensionTemplate = extensionTemplate;
+
+        };
+
+        ExtensionsController.prototype.getUrlParameter = function (name) {
+            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+            var results = regex.exec(location.search);
+            return results === null
+                ? null
+                : decodeURIComponent(results[1].replace(/\+/g, " "));
+        };
+
+        ExtensionsController.prototype.showExtensionInstallCompletePage = function () {
+            this.hideDisplayView();
+            $("#extensionInstall").hide();
+            displayContent();
+        };
+
+        ExtensionsController.prototype.buildExtensionsPage = function () {
+            var that = this;
+            var tableDiv = $("<div style='display:table;width:100%'>");
+            $.each(this._extensionContainer, function (key, value) {
+                var installbtn = $(
+                    "<button class='btn btn-primary'>" +
+                    'Install' +
+                    "</button>"
+                );
+                installbtn.on("click", function () {
+                    that.setCurrentExtension(value);
+                    var onInstallSucess = function (e, data) {
+                        console.log("INSTALL SUCCESS called");
+                        value.installed = true;
+
+                        installbtn.attr("disabled", true);
+                        console.log("Extensions Logs : " + JSON.stringify(value.scripts));
+                        that.removeListener(that.INSTALL_SUCCESS, onInstallSucess);
+                        that.removeListener(that.INSTALL_FAIL, onInstallFail);
+
+                        that.showExtensionInstallCompletePage();
+                    };
+                    var onInstallFail = function (e, data) {
+                        console.log("INSTALL FAIL called");
+                        value.installed = false;
+                        that.cleanUpExtension(value);
+                        that.hideDisplayView();
+                        console.log("Extensions Logs : " + JSON.stringify(value.scripts));
+                        that.removeListener(that.INSTALL_SUCCESS, onInstallSucess);
+                        that.removeListener(that.INSTALL_FAIL, onInstallFail);
+                    };
+                    that.addListener(that.INSTALL_SUCCESS, onInstallSucess);
+                    that.addListener(that.INSTALL_FAIL, onInstallFail);
+                    value.extObj.installExtension();
+                });
+
+
+                var uninstallbtn = $(
+                    "<button class='btn btn-primary' style='margin-left:30px'>" +
+                    'Uninstall' +
+                    "</button>"
+                );
+
+                uninstallbtn.on("click", function () {
+                    that.destroy();
+                });
+                $("#instView").append(installbtn);
+                $("#instView").append(uninstallbtn);
+
+            });
+            $("#extensionsCont").append(tableDiv);
+            $(document).trigger("tn.progressBar.off");
+            $(document).trigger("tn.loadingModal.off");
+        };
+        ExtensionsController.prototype.loadManifests = function () {
+            var that = this;
+            that.manifestArr.push(that.extensionUrl);
+            that.loadExtensions();
+        };
+
+        ExtensionsController.prototype.loadExtensions = function () {
+            var that = this;
+
+            if (this.manifestArr.length === 0) {
+                this.buildExtensionsPage();
+                return;
+            }
+            var manifest = this.manifestArr.pop();
+
+            $.get(manifest + "/manifest.json", function (data) {
+                that._currentManifestObj = data;
+                console.log(
+                    " that._currentManifestObj.name " + that._currentManifestObj.name
+                );
+                var extensionPath = manifest.substring(that.extensionUrl.length);
+                that._currentManifestObj.path = extensionPath;
+                that.loadMainScript(extensionPath + "/" + data.scripts.mainScript);
+            }).fail(function () {
+                that.onConnectionError();
+            });
+        };
+
+        ExtensionsController.prototype.loadMainScript = function (scriptUrl) {
+            var that = this;
+
+            //add code to handle errors
+
+            var onScriptLoad = function () {
+                console.log(" node.id mainscript onscriptload" + that._currentManifestObj);
+            };
+
+            var onScriptError = function () {
+                console.log("main script failed");
+                that._currentManifestObj._mainScriptId = undefined;
+                that.onConnectionError();
+            };
+            var node = this.createScriptNode(onScriptLoad, onScriptError);
+            that._currentManifestObj._mainScriptObj = {
+                id: node.id,
+                url: this.extensionUrl + scriptUrl
+            };
+            node.src = this.extensionUrl + scriptUrl;
+            document.getElementsByTagName("head")[0].appendChild(node);
+        };
+
+        ExtensionsController.prototype.registerExtension = function (extensionObj) {
+            this._extensionContainer[this._currentManifestObj.name] = {
+                extObj: extensionObj,
+                scripts: []
+            };
+            this._extensionContainer[
+                this._currentManifestObj.name
+            ].manifestObj = this._currentManifestObj;
+            this._extensionContainer[this._currentExtensionName];
+            console.log(
+                " node.id mainscript register extension " +
+                this._currentManifestObj._mainScriptId
+            );
+            this._extensionContainer[this._currentManifestObj.name].scripts.push(
+                this._currentManifestObj._mainScriptObj
+            );
+            this._extensionContainer[
+                this._currentManifestObj.name
+            ].path = this._currentManifestObj.path;
+            this.loadExtensions();
+        };
+
+        ExtensionsController.prototype.loadScriptFiles = function (
+            fileArr,
+            success,
+            fail
+        ) {
+            if (fileArr.length === 0) {
+                success();
+                return;
+            }
+            var file = fileArr.pop();
+            var that = this;
+            var fileUrl;
+            if (file.indexOf("http://") === 0 || file.indexOf("https://") === 0) {
+                fileUrl = file;
+            } else {
+                fileUrl = that.extensionUrl + this.getCurrentExtension().path + "/" + file;
+            }
+
+            var onScriptLoad = function () {
+                that.getCurrentExtension().scripts.push({
+                    id: node.id,
+                    url: fileUrl
+                });
+                that.loadScriptFiles(fileArr, success, fail);
+            };
+
+            var onScriptError = function () {
+                that.onConnectionError();
+            };
+            var node = this.createScriptNode(onScriptLoad, onScriptError);
+            node.src = fileUrl;
+            document.getElementsByTagName("head")[0].appendChild(node);
+        };
+        ExtensionsController.prototype.getCurrentExtension = function () {
+            return this._currentExtension;
+        };
+        ExtensionsController.prototype.setCurrentExtension = function (extension) {
+            this._currentExtension = extension;
+        };
+        ExtensionsController.prototype.executeScript = function (
+            scriptObj,
+            success,
+            fail
+        ) {
+            if (scriptObj.code) {
+                var node = this.createScriptNode();
+                node.textContent = scriptObj.code + "//# sourceURL=PersonMassUpdateTab" + (new Date()).getTime() + ".js";
+                document.getElementsByTagName("head")[0].appendChild(node);
+                this.getCurrentExtension().scripts.push({
+                    id: node.id,
+                    code: scriptObj.code
+                });
+                success();
+            } else {
+                this.loadScriptFiles(scriptObj.files, success, fail);
+            }
+        };
+
+        ExtensionsController.prototype.createScriptNode = function (onload, onfail) {
+            var node = document.createElement("script");
+            node.type = "text/javascript";
+            node.charset = "utf-8";
+            node.async = true;
+            node.id = "Id" + new Date().getTime();
+            if (onload) {
+                node.addEventListener("load", onload, false);
+            }
+
+            if (onfail) {
+                node.addEventListener("error", onfail, false);
+            }
+
+            return node;
+        };
+
+        ExtensionsController.prototype.destroy = function () {
+            $("#instView").empty();
+            hideContent();
+            var that = this;
+            var installedExtensions = _.filter(that._extensionContainer, function (
+                extension
+            ) {
+                return true;
+            });
+
+            this.destroyAllExtensions(installedExtensions);
+        };
+
+        ExtensionsController.prototype.onUninstallExtenion = function (
+            extension,
+            installedExtensions
+        ) {
+            extension.installed = false;
+            this.removeListener(
+                this.UNINSTALL_SUCCESS,
+                $.proxy(this.onUninstallExtenion, this, extension)
+            );
+            this.cleanUpExtension(extension);
+            this.destroyAllExtensions(installedExtensions);
+        };
+
+        ExtensionsController.prototype.destroyAllExtensions = function (
+            installedExtensions
+        ) {
+            if (installedExtensions.length === 0) {
+                this._extensionContainer = null;
+                this._currentExtension = null;
+                return;
+            }
+
+            var extension = installedExtensions.pop();
+            if (!extension.installed) {
+                this.setCurrentExtension(extension);
+                this.cleanUpExtension(extension);
+                this.destroyAllExtensions(installedExtensions);
+                return;
+            }
+
+            //In future we may have a fatal error for the same to close the app.
+            var onUninstallFail = function () {
+                this.removeListener(this.UNINSTALL_FAIL, $.proxy(onUninstallFail, this));
+                console.log("UNINSTALL FAILED");
+            };
+            this.addListener(
+                this.UNINSTALL_SUCCESS,
+                $.proxy(this.onUninstallExtenion, this, extension, installedExtensions)
+            );
+            this.addListener(this.UNINSTALL_FAIL, $.proxy(onUninstallFail, this));
+            this.setCurrentExtension(extension);
+            extension.extObj.uninstallExtension();
+        };
+
+        ExtensionsController.prototype.destroyInstalledExtension = function (
+            installedExtension
+        ) {
+            var onUninstallSucces = function () {
+                installedExtension.installed = false;
+                this.removeListener(
+                    this.UNINSTALL_SUCCESS,
+                    $.proxy(onUninstallSucces, this)
+                );
+                this.cleanUpExtension(installedExtension);
+                console.log("UNINSTALL SUccess");
+            };
+            //In future we may have a fatal error for the same to close the app.
+            var onUninstallFail = function () {
+                this.removeListener(this.UNINSTALL_FAIL, $.proxy(onUninstallFail, this));
+                console.log("UNINSTALL FAILED");
+            };
+            this.addListener(this.UNINSTALL_SUCCESS, $.proxy(onUninstallSucces, this));
+            this.addListener(this.UNINSTALL_FAIL, $.proxy(onUninstallFail, this));
+            this.setCurrentExtension(installedExtension);
+            installedExtension.extObj.uninstallExtension();
+        };
+
+        ExtensionsController.prototype.displayView = function (type, viewStr) {
+            if (!type) {
+                type = this.VIEW_LOGIN_TYPE;
+            }
+            console.log(type);
+            $("#extensionsView").empty();
+            $("#extensionsView").html(viewStr);
+            $("#extensionsView").css("z-index", 10);
+            $("#extensionsView").css("height", "100%");
+            $("#extensionsView").css("width", $("#content").css("width"));
+            $("#extensionsView").css("top", $("#content").offset().top + "px");
+            $("#extensionsView").css("left", $("#content").offset().left + "px");
+            $("#extensionsView").show();
+        };
+        ExtensionsController.prototype.hideDisplayView = function () {
+            $("#extensionsView").hide();
+
+        };
+
+        ExtensionsController.prototype.cleanUpExtension = function (extensionRef) {
+            var scripts = extensionRef.scripts;
+            //console.log("cleanUpExtension "+scripts.length + " === "+JSON.stringify(scripts))
+            for (var i = 0; i < scripts.length; i++) {
+                var scriptObj = scripts.pop();
+                //console.log(i + " ===  "+ scriptObj.id);
+                var scriptNode = document.getElementById(scriptObj.id);
+                scriptNode.parentNode.removeChild(scriptNode);
+                i--;
+            }
+        };
+
+        ExtensionsController.prototype.addListener = function (evt, listener) {
+            $(document).on(evt, listener);
+        };
+
+        ExtensionsController.prototype.removeListener = function (evt, listener) {
+            $(document).off(evt, listener);
+        };
+
+        ExtensionsController.prototype.trigger = function (evt, args) {
+            $(document).trigger(evt, args);
+        };
+
+        ExtensionsController.prototype.onConnectionError = function () {
+            alert("Connection Error")
+        };
+
+    </script>
+    <style>
+        .passage-scrolling,
+        .tab-scrolling {
+            position: relative;
+            padding: 5%;
+            width: 70%;
+            margin: 0 auto;
+            text-align: center;
+            border: 2px solid #999;
+            overflow-y: hidden;
+            margin-bottom: 20px;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+
+        }
+
+        .int-extended-text {
+            display: block;
+            margin: 8px 0;
+            width: 95%;
+            max-width: 95%;
+            height: 54px;
+            line-height: 18px;
+            font-weight: normal;
+            background-color: #ffffff;
+            height: 30%;
+        }
+    </style>
+    <script>
+        var extensionUrl = "https://interim-tn8-testui.s3.amazonaws.com/extensions/";
+        var extensionController;
+        var contentData;
+        function populateExtensionList() {
+
+        }
+
+        function displayContent() {
+            var temp = function () {
+                $("#content").html(contentData);
+                $("#content").show();
+            }
+
+
+            setTimeout(temp, 0);
+
+        }
+
+
+
+
+        function hideContent() {
+            $("#content").empty();
+            $("#extList").val("");
+            $("#content").hide();
+        }
+
+        $(document).ready(function () {
+            contentData = $("#content").html();
+            $("#content").empty();
+            
+        })
+
+        function loadExtension(){
+            $("#content").empty();
+            if(extensionController) {
+                extensionController.destroy();
+                extensionController =  undefined;
+            }
+            extensionController = new ExtensionsController($("#extPath").val());
+        }
+    </script>
+</head>
+
+<body>
+    Ext Path:
+    <input id = "extPath" type="text" style = "width:40%"/>
+    <button  onclick="loadExtension()">Load Extension</button>
+    <br/>
+    <b>(Note: It would be best to host the ExtPathTesting.html file in a http server.<br/> The extension Path needs to be a http/https path and the extenssion too would need to be hosted in a http server)
+    </b>
+        <div id="instView">
+
+    </div>
+    <div id="extensionsView" style="display:none;position:absolute;width:100%;height:100%">
+
+    </div>
+    <h3>Content: </h3><br />
+    <div id="content" style="display:none">
+        <div class="passage-scrolling" tabindex="0" role="document" style="touch-action: none; overflow-y: hidden;">
+            <p>Whenever a film is adapted from a favorite novel, serious readers of fiction
+                are prone to say, "Yeah, but the book is better." True partisans of the written
+                page are always in conflict with those who like their stories cinematically
+                revealed, projected onto wide screens that illuminate the darkness and pierce
+                the quiet with surround sound.</p>
+            <div>
+
+
+                <div data-module="ExtendedTextInteraction" data-identifier="interaction_RESPONSE1">
+                    <textarea id="interaction_RESPONSE1" class="int-extended-text height-tall ignore-answered"
+                        aria-label="text input" role="textbox" aria-multiline="true" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" maxlength="2050"></textarea>
+                    <div id="interaction_RESPONSE1_counter"
+                        class="int-extended-text-counter bordered textCounter whitebg">250</div>
+                </div>
+
+
+            </div>
+            <p></p>
+            <center><b><u>World Map</u></b></center>
+            <p></p>
+
+            <img src="https://dev814-tn8.pearsontestcontent.com/refqc/cfe504833ec9b4d4d2ac09e6fd2076d2b0b1374b/81/1/2375/1/lrgworld.svg"
+                style="width:431px;height: 290px;">
+
+            <p>I've had to think about this recently because one of my novels is being
+                developed into an independent feature film, and I was asked to co-write the
+                screenplay. I had never written dialogue that was naked of narrative, and so I
+                learned a good deal about what goes into a screenplay and what has to be taken
+                out of a novel in adapting it into a film.</p>
+
+            <p>While certain novelists have successfully written screenplays from their own
+                books, I'm not sure that there is, generally, a great advantage to having the
+                author of the novel become part of the filmmaking team. After all, the novelist
+                may know the story best, but perhaps he or she knows it too well.</p>
+
+            <p>Giving art a second life sometimes creates more of a mutant than a clone. This
+                explains the natural impulse to preserve the story in its original form. Any
+                adaptation results in something new, and thereby false when compared with the
+                original.</p>
+            <p>Yet, the film version may offer its own virtues. Indeed, many films have
+                outshone the books that inspired them. The Godfather and Gone With the Wind
+                come to mind. The fact is, novels and films are entirely different storytelling
+                experiences. When it comes to making a movie based on a book (or ultimately
+                watching that movie) being too invested in the integrity of the novel is
+                probably a bad idea.</p>
+
+            <p>A film adaptation that is deemed "faithful" to the novel is not necessarily a
+                compliment. In the most successful adaptations, liberties are taken; all kinds
+                of cheating ensues. The artistic license enables great leaps of improvisation.
+                There are redesigned endings, compressed time periods and newly invented
+                characters, and often an entirely different storytelling mechanism. Anyone who
+                read The English Patient before having seen the Academy Award winning movie
+                remembers shaking his or her head, imagining how in the world Michael
+                Ondaatje's superbly interior novel could ever sparkle so majestically on the
+                silver screen.</p>
+
+            <p>But what films sacrifice in the small window of opportunity of a movie screen
+                they make up in artfulness. Montage effects, slow motion, split screens,
+                close-ups and superimposed images create visual moments that aren't easily
+                described in prose and are even more difficult to reimagine as a reader. These
+                filmic devices may be manipulative, but they are often emotionally effective.</p>
+
+            <p>Films require dispensing with many secondary characters that fit nicely within
+                a novel but tend to overcrowd a movie. Sometimes several minor characters of a
+                novel are consolidated to form one great "composite character" for a film.
+                Other times, filmmakers change the geography of the novel or story" as in the
+                short film Bartleby, based on Herman Melville's "Bartleby, the Scrivener," in
+                which New York was replaced by Los Angeles. The novels of Charles Dickens have
+                undergone all sorts of reworkings, some bearing only a tenuous connection to
+                the original story. Great Expectations, for instance, was recently adapted into
+                a late 20th-century tale with characters renamed and foggy London entirely
+                lifted and replaced by the clear skies of Florida.</p>
+
+            <p>As playwright Anton Chekhov famously instructed, if there is a gun in Act I, it
+                needs to be fired in Act II, and the same holds true with films. Certain things
+                have to happen at various markers of a movie, otherwise audiences, expecting
+                such contrivances, will simply walk out.</p>
+
+            <p>Yet, in novels, all kinds of props are abandoned on the page. Not everything
+                needs to be resolved, not every loose end must be tied up for the novel to be
+                satisfying. Ambiguity is tolerated much more readily; the impulse toward
+                linearity (the beginning, middle and end of a story) is almost nonexistent in
+                modern fiction.</p>
+
+            <p>With all these obstacles and risks, you can see why starting from scratch with
+                an original screenplay makes sense. Other than studio executives, no one has
+                any great expectations because no one is guarding the central text, hovering
+                nervously and breathing down the screenwriter's neck.</p>
+
+            <p>Ultimately, feature films cannot replicate the experience of reading, nor can
+                everything about a novel end up being adapted-nor should it be. Filmmaking is
+                about compromise and concession. It's a miracle they don't toss the book right
+                out the window.</p>
+
+            <p class="cite">This passage is adapted from the article "Yeah, But the
+                Book Is Better" by Thane Rosenbaum ((c) 2005 by The Forward).</p>
+            <br>
+        </div>
+    </div>
+</body>
+
+</html>
